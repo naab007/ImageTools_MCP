@@ -50,16 +50,15 @@ _sweeper_thread: threading.Thread | None = None
 
 # ---- model resolution helpers --------------------------------------------
 
-_COMFYUI_INSIGHTFACE_ROOT = Path(r"B:\-AI-Stuff-\ComfyUI\models\insightface")
-_COMFYUI_FACERESTORE_DIR = Path(r"B:\-AI-Stuff-\ComfyUI\models\facerestore_models")
+from . import server_config as _cfg
 
 
 def _resolve_insightface_root() -> Path:
-    """Where insightface looks for ``<root>/models/<name>``. Prefer the
-    ComfyUI store if it exists (so we don't re-download multi-hundred-MB
-    weights when ComfyUI already has them), else the default ``~/.insightface``."""
-    if _COMFYUI_INSIGHTFACE_ROOT.exists():
-        return _COMFYUI_INSIGHTFACE_ROOT
+    """Where insightface looks for ``<root>/models/<name>``. Reads from
+    ``server_config.insightface_root``; falls back to ``~/.insightface``."""
+    root = _cfg.get_path("insightface_root")
+    if root.exists():
+        return root
     return Path.home() / ".insightface"
 
 
@@ -67,8 +66,9 @@ def _resolve_swapper_path(explicit: str | None) -> Path:
     """Path to the inswapper_128.onnx weights."""
     if explicit:
         return Path(explicit)
+    root = _cfg.get_path("insightface_root")
     for candidate in (
-        _COMFYUI_INSIGHTFACE_ROOT / "inswapper_128.onnx",
+        root / "inswapper_128.onnx",
         _resolve_insightface_root() / "models" / "inswapper_128.onnx",
     ):
         if candidate.exists():
@@ -81,7 +81,7 @@ def _resolve_swapper_path(explicit: str | None) -> Path:
 def _resolve_restorer_path(model_name: str) -> Path | None:
     """Path to a GFPGAN weights file (``GFPGANv1.4.pth`` or ``GFPGANv1.3.pth``)."""
     for d in (
-        _COMFYUI_FACERESTORE_DIR,
+        _cfg.get_path("facerestore_dir"),
         Path.home() / ".cache" / "gfpgan" / "weights",
     ):
         p = d / model_name
@@ -298,6 +298,66 @@ def _get_restorer(model_name: str = "GFPGANv1.4.pth"):
         return restorer
 
 
+# ---- saved face models (.safetensors) ------------------------------------
+
+def _load_face_model(path: str | Path) -> Any:
+    """Load a ReActor-style saved face model from a ``.safetensors`` file
+    and return a ``SimpleNamespace`` that quacks like an InsightFace ``Face``
+    object (has ``.normed_embedding``, ``.bbox``, ``.kps``, etc.).
+
+    These files are produced by ComfyUI-ReActor's "Save Face Model" node.
+    """
+    try:
+        import safetensors.torch as st
+    except ImportError as e:
+        raise RuntimeError("safetensors needed to load face models") from e
+    from types import SimpleNamespace
+    data = st.load_file(str(path))
+    emb = data["embedding"].numpy()
+    face = SimpleNamespace(
+        normed_embedding=emb,
+        embedding=emb * 128.0,
+        bbox=data["bbox"].numpy() if "bbox" in data else np.zeros(4, dtype=np.float32),
+        kps=data["kps"].numpy() if "kps" in data else np.zeros((5, 2), dtype=np.float32),
+        det_score=float(data["det_score"]) if "det_score" in data else 1.0,
+        age=int(data["age"]) if "age" in data else -1,
+        sex="M" if int(data.get("gender", 0)) == 1 else "F",
+    )
+    if "landmark_2d_106" in data:
+        face.landmark_2d_106 = data["landmark_2d_106"].numpy()
+    if "landmark_3d_68" in data:
+        face.landmark_3d_68 = data["landmark_3d_68"].numpy()
+    if "pose" in data:
+        face.pose = data["pose"].numpy()
+    return face
+
+
+def list_saved_faces(directory: str | Path | None = None) -> list[dict[str, Any]]:
+    """List ``.safetensors`` face models in ``directory`` (defaults to
+    the ``saved_faces_dir`` config path). Returns name + path + metadata."""
+    d = Path(directory) if directory else _cfg.get_path("saved_faces_dir")
+    if not d.exists():
+        return []
+    out = []
+    for f in sorted(d.iterdir()):
+        if f.suffix.lower() != ".safetensors":
+            continue
+        entry: dict[str, Any] = {
+            "name": f.stem,
+            "path": str(f),
+            "size_bytes": f.stat().st_size,
+        }
+        try:
+            face = _load_face_model(f)
+            entry["age"] = face.age
+            entry["sex"] = face.sex
+        except Exception:
+            entry["age"] = None
+            entry["sex"] = None
+        out.append(entry)
+    return out
+
+
 # ---- public API ----------------------------------------------------------
 
 def status() -> dict[str, Any]:
@@ -395,17 +455,22 @@ def detect_faces(image: Image.Image, *,
     return out
 
 
-def swap_face(source_image: Image.Image, target_image: Image.Image, *,
+def swap_face(source_image: Image.Image | None = None,
+              target_image: Image.Image = None, *,
+              source_face_model: str | None = None,
               source_face_index: int = 0,
               target_face_indices: list[int] | None = None,
               swapper_path: str | None = None,
               restore: bool = False,
               restorer_model: str = "GFPGANv1.4.pth",
               restore_weight: float = 0.5) -> Image.Image:
-    """Swap face(s) from ``source_image`` onto ``target_image``.
+    """Swap face(s) onto ``target_image``.
 
-    - ``source_face_index`` picks which face from the source (faces are
-      sorted by bbox area, 0 = largest).
+    Source face comes from ONE of:
+    - ``source_image`` — a PIL Image; face at ``source_face_index`` is used.
+    - ``source_face_model`` — path to a ``.safetensors`` saved face model
+      (ReActor / ComfyUI format). Overrides ``source_image`` if both given.
+
     - ``target_face_indices`` is the list of face indices in ``target_image``
       to overwrite. ``None`` = all detected faces. ``[0]`` = just the
       largest. ``[0, 1]`` = the two largest, etc.
@@ -418,21 +483,29 @@ def swap_face(source_image: Image.Image, target_image: Image.Image, *,
     analyser = _get_face_analyser()
     swapper = _get_face_swapper(swapper_path)
 
-    src_bgr = _pil_to_bgr(source_image)
-    src_faces = analyser.get(src_bgr)
-    if not src_faces:
-        raise ValueError("no face detected in source_image")
-    src_faces = sorted(
-        src_faces,
-        key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]),
-        reverse=True,
-    )
-    if source_face_index >= len(src_faces):
-        raise ValueError(
-            f"source_face_index={source_face_index} out of range; "
-            f"only {len(src_faces)} face(s) in source"
+    # Resolve the source face — either from a saved model or a live image.
+    if source_face_model is not None:
+        source_face = _load_face_model(source_face_model)
+    elif source_image is not None:
+        src_bgr = _pil_to_bgr(source_image)
+        src_faces = analyser.get(src_bgr)
+        if not src_faces:
+            raise ValueError("no face detected in source_image")
+        src_faces = sorted(
+            src_faces,
+            key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]),
+            reverse=True,
         )
-    source_face = src_faces[source_face_index]
+        if source_face_index >= len(src_faces):
+            raise ValueError(
+                f"source_face_index={source_face_index} out of range; "
+                f"only {len(src_faces)} face(s) in source"
+            )
+        source_face = src_faces[source_face_index]
+    else:
+        raise ValueError(
+            "provide either source_image or source_face_model"
+        )
 
     tgt_bgr = _pil_to_bgr(target_image)
     tgt_faces = analyser.get(tgt_bgr)

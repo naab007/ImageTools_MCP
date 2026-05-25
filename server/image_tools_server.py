@@ -3218,7 +3218,9 @@ def face_detect(canvas_id: str, *, det_size: int = 640) -> dict:
 
 
 @mcp.tool()
-def face_transfer(source_canvas_id: str, target_canvas_id: str, *,
+def face_transfer(target_canvas_id: str, *,
+                  source_canvas_id: str | None = None,
+                  source_face_model: str | None = None,
                   source_face_index: int = 0,
                   target_face_indices: list[int] | None = None,
                   restore: bool = False,
@@ -3226,20 +3228,29 @@ def face_transfer(source_canvas_id: str, target_canvas_id: str, *,
                   restore_weight: float = 0.5,
                   swapper_path: str | None = None,
                   new_canvas_id: str | None = None) -> dict:
-    """Swap face(s) from ``source_canvas_id`` onto ``target_canvas_id``.
-    Result lands on a NEW canvas; originals untouched.
+    """Swap face(s) onto ``target_canvas_id``. Result is a NEW canvas.
 
-    - ``source_face_index`` picks which face from the source (sorted by
-      bbox area, 0 = largest).
+    Source face comes from ONE of (provide exactly one):
+    - ``source_canvas_id`` — a canvas with a face; the face at
+      ``source_face_index`` (sorted by area, 0 = largest) is used.
+    - ``source_face_model`` — path to a ``.safetensors`` saved face model
+      (ReActor / ComfyUI format). Use ``face_list_models`` to discover
+      available models at ``B:\\-AI-Stuff-\\faces``.
+
     - ``target_face_indices`` lists which target faces to overwrite. Omit
-      or pass ``null`` to swap ALL detected target faces. ``[0]`` =
-      largest only. ``[0, 1]`` = the two largest, etc.
+      or ``null`` = ALL detected target faces. ``[0]`` = largest only.
     - ``restore=true`` runs GFPGAN over the result to clean up swap
       artefacts. ``restore_weight`` ∈ 0-1 blends restoration intensity."""
-    src = store.compose(source_canvas_id)
+    if source_canvas_id is None and source_face_model is None:
+        raise ValueError(
+            "provide either source_canvas_id (a canvas with a face) or "
+            "source_face_model (path to a .safetensors face model)"
+        )
+    src = store.compose(source_canvas_id) if source_canvas_id else None
     tgt = store.compose(target_canvas_id)
     out = face_swap.swap_face(
         src, tgt,
+        source_face_model=source_face_model,
         source_face_index=source_face_index,
         target_face_indices=target_face_indices,
         swapper_path=swapper_path,
@@ -3269,6 +3280,50 @@ def face_restore(canvas_id: str, *,
                                   weight=weight)
     cid = store.put_image(out, canvas_id=new_canvas_id, layer_name="Face restore")
     return _summary(cid)
+
+
+@mcp.tool()
+def face_list_models(directory: str | None = None) -> dict:
+    """List saved face models (``.safetensors``) in the face-models
+    directory. Defaults to ``B:\\-AI-Stuff-\\faces``. Each entry shows
+    the model name, file path, size, and embedded age/sex metadata.
+
+    Use the ``path`` field from the returned list as
+    ``source_face_model`` in ``face_transfer``."""
+    models = face_swap.list_saved_faces(directory)
+    from .server_config import get as _cfg_get
+    return {"directory": directory or _cfg_get("saved_faces_dir"),
+            "count": len(models), "models": models}
+
+
+# ============================================================ Server config
+
+@mcp.tool()
+def get_config() -> dict:
+    """Return the current server path configuration — all model directories,
+    scratch folder, HF cache, etc. Override any key with ``set_config``."""
+    from . import server_config
+    return {"config": server_config.get_all()}
+
+
+@mcp.tool()
+def set_config(key: str, value: str) -> dict:
+    """Override a server config path for this session.
+
+    Keys:
+    - ``insightface_root`` — InsightFace buffalo_l + inswapper_128 weights
+    - ``facerestore_dir`` — GFPGAN / CodeFormer .pth files
+    - ``saved_faces_dir`` — ReActor-saved ``.safetensors`` face models
+    - ``comfyui_unet_dir`` — GGUF / diffusion model weights
+    - ``hf_cache_dir`` — HuggingFace cache (empty = default)
+    - ``scratch_dir`` — temp working directory for intermediate files
+
+    Changes are session-only (not persisted). For permanent overrides, set
+    the environment variable ``IMAGETOOLS_<KEY>`` (uppercased), e.g.
+    ``IMAGETOOLS_SCRATCH_DIR=D:\\tmp``."""
+    from . import server_config
+    server_config.set(key, value)
+    return {"key": key, "value": value, "config": server_config.get_all()}
 
 
 # ============================================================ entry
