@@ -94,11 +94,6 @@ ImageTools MCP is a **Model Context Protocol server** that gives AI assistants (
 - **CLIPSeg** — text-prompted segmentation ("the rusty bicycle")
 - **Mask Overlay/Preview** — visualise masks with coloured overlays + bbox + labels
 
-### Face Swap & Restore
-- **InsightFace** `buffalo_l` detector + `inswapper_128.onnx` face swap
-- **GFPGAN** v1.4 face restoration/enhancement
-- Detect → swap → restore in one pipeline. — slim by design.
-
 ### AI Generation (optional, GPU recommended)
 - **Stable Diffusion** — txt2img, img2img, inpaint (SD1.5/SDXL/SD3/FLUX)
 - **Qwen-Image-Edit** — instruction-driven image editing with Q4 GGUF quantization + Lightning 4-step LoRA
