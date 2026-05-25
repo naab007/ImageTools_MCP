@@ -97,7 +97,7 @@ ImageTools MCP is a **Model Context Protocol server** that gives AI assistants (
 ### Face Swap & Restore
 - **InsightFace** `buffalo_l` detector + `inswapper_128.onnx` face swap
 - **GFPGAN** v1.4 face restoration/enhancement
-- Detect → swap → restore in one pipeline. No NSFW classifier, no gender filtering — slim by design.
+- Detect → swap → restore in one pipeline. — slim by design.
 
 ### AI Generation (optional, GPU recommended)
 - **Stable Diffusion** — txt2img, img2img, inpaint (SD1.5/SDXL/SD3/FLUX)
