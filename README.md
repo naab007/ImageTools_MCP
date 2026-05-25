@@ -303,9 +303,84 @@ Colour args accept:
 
 ---
 
+## Acknowledgements & Attribution
+
+ImageTools MCP builds on these excellent open-source projects and models:
+
+### Python Libraries
+
+| Package | License | Author |
+|---|---|---|
+| [diffusers](https://github.com/huggingface/diffusers) | Apache 2.0 | Hugging Face |
+| [transformers](https://github.com/huggingface/transformers) | Apache 2.0 | Hugging Face |
+| [accelerate](https://github.com/huggingface/accelerate) | Apache 2.0 | Hugging Face |
+| [peft](https://github.com/huggingface/peft) | Apache 2.0 | Hugging Face |
+| [timm](https://github.com/huggingface/pytorch-image-models) | Apache 2.0 | Hugging Face / Ross Wightman |
+| [safetensors](https://github.com/huggingface/safetensors) | Apache 2.0 | Hugging Face |
+| [bitsandbytes](https://github.com/bitsandbytes-foundation/bitsandbytes) | MIT | bitsandbytes foundation |
+| [gguf](https://github.com/ggerganov/ggml) | MIT | Georgi Gerganov |
+| [insightface](https://github.com/deepinsight/insightface) | MIT (code) | DeepInsight |
+| [gfpgan](https://github.com/TencentARC/GFPGAN) | Apache 2.0 | TencentARC |
+| [basicsr](https://github.com/XPixelGroup/BasicSR) | Apache 2.0 | XPixelGroup |
+| [facexlib](https://github.com/xinntao/facexlib) | Apache 2.0 | Xintao Wang |
+| [ultralytics](https://github.com/ultralytics/ultralytics) | AGPL-3.0 | Ultralytics |
+| [sam2](https://github.com/facebookresearch/sam2) | Apache 2.0 | Meta Research |
+| [kornia](https://github.com/kornia/kornia) | Apache 2.0 | Kornia.org |
+| [opencv-python](https://github.com/opencv/opencv) | Apache 2.0 | OpenCV |
+| [Pillow](https://github.com/python-pillow/Pillow) | MIT-CMU (HPND) | Jeffrey A. Clark / Pillow contributors |
+| [numpy](https://github.com/numpy/numpy) | BSD-3-Clause | NumPy developers |
+| [scipy](https://github.com/scipy/scipy) | BSD-3-Clause | SciPy developers |
+| [qrcode](https://github.com/lincolnloop/python-qrcode) | BSD | Lincoln Loop |
+| [onnxruntime](https://github.com/microsoft/onnxruntime) | MIT | Microsoft |
+| [mcp (FastMCP)](https://github.com/anthropics/anthropic-tools) | MIT | Anthropic |
+| [psd-tools](https://github.com/psd-tools/psd-tools) | MIT | psd-tools contributors |
+| [cairosvg](https://github.com/Kozea/CairoSVG) | LGPL-3.0 | Kozea community |
+| [rawpy](https://github.com/letmaik/rawpy) | MIT | Maik Riechert |
+| [pillow-heif](https://github.com/bigcat88/pillow_heif) | BSD-3-Clause | Alexander Piskun |
+| [einops](https://github.com/arogozhnikov/einops) | MIT | Alex Rogozhnikov |
+
+### Model Weights
+
+| Model | License | Author | Used by |
+|---|---|---|---|
+| [Qwen-Image-Edit-2511](https://huggingface.co/Qwen/Qwen-Image-Edit-2511) | Apache 2.0 | Alibaba / Qwen | `qwen_*` tools |
+| [Qwen-Image-Edit-2511-GGUF](https://huggingface.co/unsloth/Qwen-Image-Edit-2511-GGUF) | Apache 2.0 | Unsloth (quantized) | Q4/Q3 GGUF |
+| [Qwen-Image-Edit-2511-Lightning](https://huggingface.co/lightx2v/Qwen-Image-Edit-2511-Lightning) | Apache 2.0 | LightX2V | Lightning LoRA |
+| [Qwen-Image-ControlNet-Union](https://huggingface.co/InstantX/Qwen-Image-ControlNet-Union) | Apache 2.0 | InstantX | Qwen ControlNet |
+| [SAM 2.1](https://huggingface.co/facebook/sam2.1-hiera-large) | Apache 2.0 | Meta Research | `sam_*` tools |
+| [SAM 1 ViT-L](https://huggingface.co/facebook/sam-vit-large) | Apache 2.0 | Meta Research | `sam1_*` tools |
+| [CLIPSeg](https://huggingface.co/CIDAS/clipseg-rd64-refined) | Apache 2.0 | CIDAS | `clipseg_*` tools |
+| [BiRefNet](https://github.com/ZhengPeng7/BiRefNet) | MIT | Zheng Peng | `birefnet_*` tools |
+| [GFPGANv1.4](https://github.com/TencentARC/GFPGAN) | Apache 2.0 | TencentARC | `face_restore` |
+| InsightFace buffalo_l + inswapper_128 | **Non-commercial** | DeepInsight | `face_detect` / `face_transfer` |
+| [SD 1.5](https://huggingface.co/runwayml/stable-diffusion-v1-5) | CreativeML OpenRAIL-M | Runway | `sd_*` (default) |
+| [SDXL-Turbo](https://huggingface.co/stabilityai/sdxl-turbo) | **SAI Non-Commercial** | Stability AI | `sd_*` (turbo) |
+| [DreamShaper-8](https://huggingface.co/Lykon/dreamshaper-8) | CreativeML OpenRAIL-M | Lykon | `sd_inpaint` default |
+| [SD ControlNets](https://huggingface.co/lllyasviel) | CreativeML OpenRAIL-M | Lvmin Zhang | `sd_load_controlnet` |
+| [ComfyUI-GGUF](https://github.com/city96/ComfyUI-GGUF) | Apache 2.0 | city96 | Referenced (not vendored) |
+| [YOLOv8L-seg](https://github.com/ultralytics/ultralytics) | AGPL-3.0 | Ultralytics | `yolo_*` tools |
+
+### License Notes
+
+> **This repository's own code is MIT-licensed.** However, some optional dependencies and model weights carry more restrictive licenses. Please review before commercial use.
+
+| Component | Restriction | Impact |
+|---|---|---|
+| **Ultralytics / YOLOv8** (AGPL-3.0) | Copyleft — any software using it must also be AGPL-3.0, or purchase an [Enterprise License](https://ultralytics.com/license) | Affects `yolo_*` segmentation tools only. The `[yolo]` extra is optional; the other 4 segmentation models (SAM 1/2, BiRefNet, CLIPSeg) are all Apache 2.0. |
+| **InsightFace models** (non-commercial) | Pretrained weights (buffalo_l, inswapper_128) are **non-commercial research only**. Code is MIT. | Affects `face_detect` / `face_transfer`. Commercial use requires a [paid license](mailto:contact@insightface.ai). `face_restore` (GFPGAN) is Apache 2.0 and unaffected. |
+| **SDXL-Turbo** (SAI Non-Commercial) | Free for non-commercial use; commercial use free under $1M annual revenue; enterprise license above | Only applies if you use `sd_load(model="stabilityai/sdxl-turbo")`. Other SD models (SD 1.5, DreamShaper, FLUX) have different licenses. |
+| **SD 1.5 / DreamShaper / ControlNets** (OpenRAIL-M) | Allows commercial use but includes behavioural restrictions — must pass restrictions downstream | Standard for SD-ecosystem models. Permissive in practice for most uses. |
+| **CairoSVG** (LGPL-3.0) | Weak copyleft — must allow relinking but does NOT require open-sourcing your code when used as a pip dependency | Only loaded if you open SVG files. Practically zero impact for Python projects. |
+| **GFPGAN** (Apache 2.0) | Permissive | Safe for commercial use. |
+| **Everything else** | Apache 2.0 / MIT / BSD | Fully permissive. |
+
+---
+
 ## License
 
-MIT
+This project's code is released under the **MIT License**. See [LICENSE](LICENSE) for details.
+
+**Important:** The MIT license covers only this repository's source code. Third-party dependencies and model weights are subject to their own licenses as listed above. If you plan commercial use, review the InsightFace, Ultralytics, and Stability AI license terms.
 
 ---
 
