@@ -342,19 +342,11 @@ def list_saved_faces(directory: str | Path | None = None) -> list[dict[str, Any]
     for f in sorted(d.iterdir()):
         if f.suffix.lower() != ".safetensors":
             continue
-        entry: dict[str, Any] = {
+        out.append({
             "name": f.stem,
             "path": str(f),
             "size_bytes": f.stat().st_size,
-        }
-        try:
-            face = _load_face_model(f)
-            entry["age"] = face.age
-            entry["sex"] = face.sex
-        except Exception:
-            entry["age"] = None
-            entry["sex"] = None
-        out.append(entry)
+        })
     return out
 
 
@@ -422,8 +414,6 @@ def detect_faces(image: Image.Image, *,
       - ``bbox``: [x1, y1, x2, y2] floats
       - ``area``: bbox area in pixels (float)
       - ``score``: detector confidence
-      - ``age``: estimated age (int) — buffalo_l includes this
-      - ``sex``: 'M' or 'F' (best-effort)
       - ``kps``: 5-point landmarks (list of 5 [x, y])
 
     Faces are sorted by bbox area, largest first — matching the default
@@ -447,8 +437,6 @@ def detect_faces(image: Image.Image, *,
             "bbox": [float(v) for v in bx],
             "area": float((bx[2] - bx[0]) * (bx[3] - bx[1])),
             "score": float(getattr(f, "det_score", 0.0)),
-            "age": int(getattr(f, "age", -1)) if hasattr(f, "age") else None,
-            "sex": getattr(f, "sex", None),
             "kps": [[float(p[0]), float(p[1])] for p in f.kps]
                    if getattr(f, "kps", None) is not None else None,
         })

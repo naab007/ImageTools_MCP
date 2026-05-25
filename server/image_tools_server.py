@@ -3210,8 +3210,8 @@ def face_detect(canvas_id: str, *, det_size: int = 640) -> dict:
     area (largest first) — that's the same index space the swap and restore
     tools use.
 
-    Each face has: ``bbox`` ([x1, y1, x2, y2]), ``area``, ``score``, ``age``,
-    ``sex``, ``kps`` (5-point landmarks)."""
+    Each face has: ``bbox`` ([x1, y1, x2, y2]), ``area``, ``score``,
+    ``kps`` (5-point landmarks)."""
     img = store.compose(canvas_id)
     faces = face_swap.detect_faces(img, det_size=det_size)
     return {"canvas_id": canvas_id, "n_faces": len(faces), "faces": faces}
